@@ -1,7 +1,7 @@
 //! By convention, root.zig is the root source file when making a library.
 const std = @import("std");
 
-// Sample tweet-headers.js
+// Sample tweet-headers.js you get from downloading your data on X
 // window.YTD.tweet_headers.part0 = [
 // {
 //   "tweet" : {
@@ -18,19 +18,21 @@ const TweetHeader = struct {
 };
 
 const TweetHeaderError = error {
-    ParseError
+    ParseError,
+    OutOfMemory
 };
 
 pub fn parseTweetHeaders(buffer: []const u8, allocator: std.mem.Allocator) TweetHeaderError![]TweetHeader {
     // Parse begins at the first '[' skipping the non json friendly header
-    const start = std.mem.findScalar(u8, buffer, '['); 
+    const start = std.mem.indexOfScalar(u8, buffer, '['); 
 
     if(start == null) {
         return TweetHeaderError.ParseError;
     } else {
         // Parse the tweets into an ArrayList
-        var list = std.ArrayList(TweetHeader).init(allocator);
-        return list.toOwnedSlice();
+        var list = std.ArrayList(TweetHeader).initCapacity(allocator, 128) catch 
+            return TweetHeaderError.OutOfMemory;
+        return list.toOwnedSlice(allocator);
     }
 }
 
