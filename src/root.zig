@@ -21,12 +21,16 @@ const TweetHeaderError = error {
     ParseError
 };
 
-pub fn parseTweetHeaders(buffer: []u8, allocator: std.mem.Allocator) TweetHeaderError![]TweetHeader {
-    if(buffer.len == 0) {
-        return .ParseError;
+pub fn parseTweetHeaders(buffer: []const u8, allocator: std.mem.Allocator) TweetHeaderError![]TweetHeader {
+    // Parse begins at the first '[' skipping the non json friendly header
+    const start = std.mem.findScalar(u8, buffer, '['); 
+
+    if(start == null) {
+        return TweetHeaderError.ParseError;
     } else {
-        _ = allocator;
-        return []TweetHeader;
+        // Parse the tweets into an ArrayList
+        var list = std.ArrayList(TweetHeader).init(allocator);
+        return list.toOwnedSlice();
     }
 }
 
@@ -44,5 +48,11 @@ test "Parse test" {
       \\   }]
           ;
 
+    const parsed: [0]TweetHeader = .{};
+
     try testing.expectEqual(sample_content.len, 198);  
+
+    const result = try parseTweetHeaders(sample_content, testing.allocator);
+
+    try testing.expectEqualSlices([]TweetHeader, result, parsed);
 }
