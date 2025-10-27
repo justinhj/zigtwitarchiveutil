@@ -77,5 +77,6 @@ test "Parse test" {
     const parsed: [1]TweetHeader = .{sample_tweet};
 
     const result = try parseTweetHeaders(sample_content, testing.allocator);
-    try testing.expectEqualSlices(TweetHeader, result, &parsed);
+    defer testing.allocator.free(result);
+    try testing.expectEqualDeep(result, &parsed);
 }
