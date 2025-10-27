@@ -12,9 +12,13 @@ const std = @import("std");
 // },
 
 const TweetHeader = struct {
-    tweet_id : u64,
-    user_id : u64,
-    created_at_str : []u8
+    tweet : TweetHeaderTweet
+};
+
+const TweetHeaderTweet = struct {
+    tweet_id : []const u8,
+    user_id : []const u8,
+    created_at : []const u8
 };
 
 const TweetHeaderError = error {
@@ -32,6 +36,18 @@ pub fn parseTweetHeaders(buffer: []const u8, allocator: std.mem.Allocator) Tweet
         // Parse the tweets into an ArrayList
         var list = std.ArrayList(TweetHeader).initCapacity(allocator, 128) catch 
             return TweetHeaderError.OutOfMemory;
+
+        const options = std.json.ParseOptions {
+        };
+        var parsed = std.json.parseFromSlice([]TweetHeader, allocator, buffer[start.?..], options) catch 
+            return TweetHeaderError.ParseError;
+
+        const data = parsed.value;
+        for (data) |tweet| {
+            try list.append(allocator, tweet);
+        }
+        parsed.deinit();
+
         return list.toOwnedSlice(allocator);
     }
 }
@@ -50,11 +66,16 @@ test "Parse test" {
       \\   }]
           ;
 
-    const parsed: [0]TweetHeader = .{};
+    const sample_tweet = TweetHeader {
+        .tweet = TweetHeaderTweet {
+            .tweet_id = "1979736667021087142",
+            .user_id = "29532976",
+            .created_at = "Sun Oct 19 02:29:37 +0000 2025"
+        }
+    };
 
-    try testing.expectEqual(sample_content.len, 198);  
+    const parsed: [1]TweetHeader = .{sample_tweet};
 
     const result = try parseTweetHeaders(sample_content, testing.allocator);
-
-    try testing.expectEqualSlices([]TweetHeader, result, parsed);
+    try testing.expectEqualSlices(TweetHeader, result, &parsed);
 }
