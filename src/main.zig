@@ -29,8 +29,8 @@ pub fn main() !void {
     }; 
     std.debug.print("Processing file name {s}\n", .{input_file_name});
 
-    const create_flags = std.fs.File.CreateFlags {.read = true, .truncate = false};
-    const file = std.fs.cwd().createFile(input_file_name, create_flags) catch {
+    const open_flags = std.fs.File.OpenFlags {.mode = .read_only};
+    const file = std.fs.cwd().openFile(input_file_name, open_flags) catch {
         return ZigTwitError.FileNotFound;
     };
     defer file.close();
