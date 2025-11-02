@@ -26,7 +26,7 @@ const TweetHeaderError = error {
     OutOfMemory
 };
 
-pub fn parseTweetHeaders(buffer: []const u8, allocator: std.mem.Allocator) TweetHeaderError![]TweetHeader {
+pub fn parseTweetHeaders(allocator: std.mem.Allocator, buffer: []const u8) TweetHeaderError![]TweetHeader {
     // Parse begins at the first '[' skipping the non json friendly header
     const start = std.mem.indexOfScalar(u8, buffer, '['); 
 
@@ -77,7 +77,7 @@ test "Parse test" {
 
     const parsed: [1]TweetHeader = .{sample_tweet};
 
-    const result = try parseTweetHeaders(sample_content, testing.allocator);
+    const result = try parseTweetHeaders(testing.allocator, sample_content);
     defer testing.allocator.free(result);
     try testing.expectEqualDeep(result, &parsed);
 }

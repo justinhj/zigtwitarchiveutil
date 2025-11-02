@@ -1,5 +1,5 @@
 const std = @import("std");
-const zigtwitarchiveutil = @import("zigtwitarchiveutil");
+const zigtwit = @import("zigtwitarchiveutil");
 
 const ZigTwitError = error {
     NoFileSupplied,
@@ -27,5 +27,18 @@ pub fn main() !void {
         std.debug.print("Please pass a file name of the Twitter index file,\n", .{});
         return;
     }; 
-    std.debug.print("Input file name {s}\n", .{input_file_name});
+    std.debug.print("Processing file name {s}\n", .{input_file_name});
+
+    const create_flags = std.fs.File.CreateFlags {.read = true, .truncate = false};
+    const file = std.fs.cwd().createFile(input_file_name, create_flags) catch {
+        return ZigTwitError.FileNotFound;
+    };
+    defer file.close();
+
+    const max_file_size = 1 * 1024 * 1024 * 1024; // 1 GB
+    const file_contents = try file.readToEndAlloc(allocator, max_file_size);
+    defer allocator.free(file_contents);
+
+    const parsed = try zigtwit.parseTweetHeaders(allocator, file_contents);
+    std.debug.print("Parsed headers and found {d} tweets.\n", .{parsed.len});
 }
