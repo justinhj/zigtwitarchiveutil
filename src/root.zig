@@ -37,16 +37,17 @@ pub fn parseTweetHeaders(buffer: []const u8, allocator: std.mem.Allocator) Tweet
         var list = std.ArrayList(TweetHeader).initCapacity(allocator, 128) catch 
             return TweetHeaderError.OutOfMemory;
 
-        const options = std.json.ParseOptions {
-        };
+        const options = std.json.ParseOptions{
+                .ignore_unknown_fields = true,
+            };
         var parsed = std.json.parseFromSlice([]TweetHeader, allocator, buffer[start.?..], options) catch 
             return TweetHeaderError.ParseError;
+        defer parsed.deinit();
 
         const data = parsed.value;
         for (data) |tweet| {
             try list.append(allocator, tweet);
         }
-        parsed.deinit();
 
         return list.toOwnedSlice(allocator);
     }
