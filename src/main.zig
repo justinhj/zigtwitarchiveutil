@@ -1,5 +1,6 @@
 const std = @import("std");
 const zigtwit = @import("zigtwitarchiveutil");
+const zdt = @import("zdt");
 
 const ZigTwitError = error {
     NoFileSupplied,
@@ -39,6 +40,17 @@ pub fn main() !void {
     const file_contents = try file.readToEndAlloc(allocator, max_file_size);
     defer allocator.free(file_contents);
 
-    const parsed = try zigtwit.parseTweetHeaders(allocator, file_contents);
-    std.debug.print("Parsed headers and found {d} tweets.\n", .{parsed.len});
+    const tweet_headers = zigtwit.parseTweetHeaders(allocator, file_contents) catch {
+        std.debug.print("Failed to parse the Twitter index file.\n", .{});
+        return;
+    }; 
+    std.debug.print("Parsed headers and found {d} tweets.\n", .{tweet_headers.len});
+
+    for (tweet_headers) |t1| {
+        const date1 = zdt.Datetime.fromString(t1.tweet.created_at, "%a %b %d %H:%M:%S %z %Y") catch |err| {
+            std.debug.print("Parse error {}.\n", .{err});
+            return;
+        };
+        std.debug.print("{d}/{d}/{d}\n", .{date1.day, date1.month, @rem(date1.year, 100)});
+    }
 }

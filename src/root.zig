@@ -11,6 +11,60 @@ const std = @import("std");
 //   }
 // },
 
+// Sample post from tweets.js
+
+// {
+//   "tweet" : {
+//     "edit_info" : {
+//       "initial" : {
+//         "editTweetIds" : [
+//           "1977039067859894552"
+//         ],
+//         "editableUntil" : "2025-10-11T16:50:20.000Z",
+//         "editsRemaining" : "5",
+//         "isEditEligible" : false
+//       }
+//     },
+//     "retweeted" : false,
+//     "source" : "<a href=\"https://mobile.twitter.com\" rel=\"nofollow\">Twitter Web App</a>",
+//     "entities" : {
+//       "hashtags" : [ ],
+//       "symbols" : [ ],
+//       "user_mentions" : [ ],
+//       "urls" : [
+//         {
+//           "url" : "https://t.co/RwFBCwuHS5",
+//           "expanded_url" : "https://codeberg.org/ziglings/exercises",
+//           "display_url" : "codeberg.org/ziglings/exerc…",
+//           "indices" : [
+//             "0",
+//             "23"
+//           ]
+//         }
+//       ]
+//     },
+//     "display_text_range" : [
+//       "0",
+//       "23"
+//     ],
+//     "favorite_count" : "0",
+//     "in_reply_to_status_id_str" : "1977039066895204461",
+//     "id_str" : "1977039067859894552",
+//     "in_reply_to_user_id" : "29532976",
+//     "truncated" : false,
+//     "retweet_count" : "0",
+//     "id" : "1977039067859894552",
+//     "in_reply_to_status_id" : "1977039066895204461",
+//     "possibly_sensitive" : false,
+//     "created_at" : "Sat Oct 11 15:50:20 +0000 2025",
+//     "favorited" : false,
+//     "full_text" : "https://t.co/RwFBCwuHS5",
+//     "lang" : "zxx",
+//     "in_reply_to_screen_name" : "justinhj",
+//     "in_reply_to_user_id_str" : "29532976"
+//   }
+// },
+
 const TweetHeader = struct {
     tweet : TweetHeaderTweet
 };

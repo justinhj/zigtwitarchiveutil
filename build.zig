@@ -41,6 +41,12 @@ pub fn build(b: *std.Build) void {
         .target = target,
     });
 
+    // zdt for date parsing
+    const zdt_dep = b.dependency("zdt", .{
+        .target = target,
+        .optimize = optimize,
+    });
+
     // Here we define an executable. An executable needs to have a root module
     // which needs to expose a `main` function. While we could add a main function
     // to the module defined above, it's sometimes preferable to split business
@@ -82,6 +88,8 @@ pub fn build(b: *std.Build) void {
             },
         }),
     });
+
+    exe.root_module.addImport("zdt", zdt_dep.module("zdt"));
 
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
