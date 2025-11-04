@@ -93,10 +93,55 @@ const TweetHeaderTweet = struct {
     created_at : []const u8
 };
 
+const TweetError = error {
+    ParseError,
+    OutOfMemory
+};
+
 const TweetHeaderError = error {
     ParseError,
     OutOfMemory
 };
+
+pub fn parseTweets(allocator: std.mem.Allocator, buffer: []const u8) TweetError![]Tweet {
+    // Parse begins at the first '[' skipping the non json friendly header
+    const start = std.mem.indexOfScalar(u8, buffer, '['); 
+
+    if(start == null) {
+        return TweetError.ParseError;
+    } else {
+        // Parse the tweets into an ArrayList
+        var list = std.ArrayList(Tweet).initCapacity(allocator, 128) catch 
+            return TweetError.OutOfMemory;
+
+        const options = std.json.ParseOptions{
+                .ignore_unknown_fields = true
+            };
+        const parsed = std.json.parseFromSlice([]Tweet, allocator, buffer[start.?..], options) catch 
+            return TweetError.ParseError;
+        defer parsed.deinit();
+
+        const data = parsed.value;
+        for (data) |tweet| {
+            var tweettweet : TweetTweet = undefined;
+            const tweet_copy = Tweet {.tweet = tweettweet};
+            tweettweet.created_at = allocator.dupe(u8, tweet.tweet.created_at) catch return TweetError.OutOfMemory;
+            tweettweet.favorite_count = allocator.dupe(u8, tweet.tweet.favorite_count) catch return TweetError.OutOfMemory;
+            tweettweet.favorited = tweet.tweet.favorited;
+            tweettweet.full_text = allocator.dupe(u8, tweet.tweet.full_text) catch return TweetError.OutOfMemory;
+            tweettweet.id_str = allocator.dupe(u8, tweet.tweet.id_str) catch return TweetError.OutOfMemory;
+            tweettweet.in_reply_to_screen_name = allocator.dupe(u8, tweet.tweet.in_reply_to_screen_name) catch return TweetError.OutOfMemory;
+            tweettweet.in_reply_to_user_id_str = allocator.dupe(u8, tweet.tweet.in_reply_to_user_id_str) catch return TweetError.OutOfMemory;
+            tweettweet.possibly_sensitive = tweet.tweet.possibly_sensitive;
+            tweettweet.source = allocator.dupe(u8, tweet.tweet.source) catch return TweetError.OutOfMemory;
+            tweettweet.retweeted = tweet.tweet.retweeted;
+
+            try list.append(allocator, tweet_copy);
+        }
+
+        return list.toOwnedSlice(allocator);
+    }
+}
 
 pub fn parseTweetHeaders(allocator: std.mem.Allocator, buffer: []const u8) TweetHeaderError![]TweetHeader {
     // Parse begins at the first '[' skipping the non json friendly header
@@ -202,7 +247,7 @@ test "Parse tweets" {
       \\     "possibly_sensitive" : false,
       \\     "created_at" : "Sat Oct 11 15:50:20 +0000 2025",
       \\     "favorited" : false,
-      \\     "full_text" : "https:\\t.co/RwFBCwuHS5",
+      \\     "full_text" : "https://t.co/RwFBCwuHS5",
       \\     "lang" : "zxx",
       \\     "in_reply_to_screen_name" : "justinhj",
       \\     "in_reply_to_user_id_str" : "29532976"
@@ -213,7 +258,7 @@ test "Parse tweets" {
     const sample_tweet = Tweet {
         .tweet = TweetTweet {
             .retweeted = false,
-            .source = "<a href=\"https://mobile.twitter.com\" rel=\"nofollow\">Twitter Web App</a>",
+            .source = "<a href=\"https:\\mobile.twitter.com\" rel=\"nofollow\">Twitter Web App</a>",
             .favorite_count = "0",
             .full_text = "https://t.co/RwFBCwuHS5",
             .id_str = "1977039067859894552",
@@ -228,9 +273,10 @@ test "Parse tweets" {
     try testing.expect(sample_content.len > 0);
     try testing.expect(sample_tweet.tweet.retweeted == false);
 
-    // const parsed: [1]TweetHeader = .{sample_tweet};
+    const parsed: [1]Tweet = .{sample_tweet};
 
-    // const result = try parseTweetHeaders(testing.allocator, sample_content);
-    // defer testing.allocator.free(result);
-    // try testing.expectEqualDeep(result, &parsed);
+    const result = try parseTweets(testing.allocator, sample_content);
+    defer testing.allocator.free(result);
+    std.debug.print("Sample tweet {}", .{result[0]});
+    try testing.expectEqualDeep(result, &parsed);
 }
