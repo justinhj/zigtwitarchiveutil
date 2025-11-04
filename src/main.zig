@@ -44,9 +44,9 @@ pub fn main() !void {
         std.debug.print("Failed to parse the Twitter index file.\n", .{});
         return;
     }; 
-    std.debug.print("Parsed headers and found {d} tweets.\n", .{tweet_headers.len});
+    std.debug.print("Parsed headers and found {d} tweets.\n", .{tweet_headers.value.len});
 
-    for (tweet_headers) |t1| {
+    for (tweet_headers.value) |t1| {
         const date1 = zdt.Datetime.fromString(t1.tweet.created_at, "%a %b %d %H:%M:%S %z %Y") catch |err| {
             std.debug.print("Parse error {}.\n", .{err});
             return;

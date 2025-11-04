@@ -103,70 +103,35 @@ const TweetHeaderError = error {
     OutOfMemory
 };
 
-pub fn parseTweets(allocator: std.mem.Allocator, buffer: []const u8) TweetError![]Tweet {
+pub fn parseTweets(allocator: std.mem.Allocator, buffer: []const u8) TweetError!std.json.Parsed([]Tweet) {
     // Parse begins at the first '[' skipping the non json friendly header
     const start = std.mem.indexOfScalar(u8, buffer, '['); 
 
     if(start == null) {
         return TweetError.ParseError;
     } else {
-        // Parse the tweets into an ArrayList
-        var list = std.ArrayList(Tweet).initCapacity(allocator, 128) catch 
-            return TweetError.OutOfMemory;
-
         const options = std.json.ParseOptions{
                 .ignore_unknown_fields = true
             };
-        const parsed = std.json.parseFromSlice([]Tweet, allocator, buffer[start.?..], options) catch 
+        const result = std.json.parseFromSlice([]Tweet, allocator, buffer[start.?..], options) catch 
             return TweetError.ParseError;
-        defer parsed.deinit();
-
-        const data = parsed.value;
-        for (data) |tweet| {
-            var tweettweet : TweetTweet = undefined;
-            const tweet_copy = Tweet {.tweet = tweettweet};
-            tweettweet.created_at = allocator.dupe(u8, tweet.tweet.created_at) catch return TweetError.OutOfMemory;
-            tweettweet.favorite_count = allocator.dupe(u8, tweet.tweet.favorite_count) catch return TweetError.OutOfMemory;
-            tweettweet.favorited = tweet.tweet.favorited;
-            tweettweet.full_text = allocator.dupe(u8, tweet.tweet.full_text) catch return TweetError.OutOfMemory;
-            tweettweet.id_str = allocator.dupe(u8, tweet.tweet.id_str) catch return TweetError.OutOfMemory;
-            tweettweet.in_reply_to_screen_name = allocator.dupe(u8, tweet.tweet.in_reply_to_screen_name) catch return TweetError.OutOfMemory;
-            tweettweet.in_reply_to_user_id_str = allocator.dupe(u8, tweet.tweet.in_reply_to_user_id_str) catch return TweetError.OutOfMemory;
-            tweettweet.possibly_sensitive = tweet.tweet.possibly_sensitive;
-            tweettweet.source = allocator.dupe(u8, tweet.tweet.source) catch return TweetError.OutOfMemory;
-            tweettweet.retweeted = tweet.tweet.retweeted;
-
-            try list.append(allocator, tweet_copy);
-        }
-
-        return list.toOwnedSlice(allocator);
+        return result;
     }
 }
 
-pub fn parseTweetHeaders(allocator: std.mem.Allocator, buffer: []const u8) TweetHeaderError![]TweetHeader {
+pub fn parseTweetHeaders(allocator: std.mem.Allocator, buffer: []const u8) TweetHeaderError!std.json.Parsed([]TweetHeader) {
     // Parse begins at the first '[' skipping the non json friendly header
     const start = std.mem.indexOfScalar(u8, buffer, '['); 
 
     if(start == null) {
         return TweetHeaderError.ParseError;
     } else {
-        // Parse the tweets into an ArrayList
-        var list = std.ArrayList(TweetHeader).initCapacity(allocator, 128) catch 
-            return TweetHeaderError.OutOfMemory;
-
         const options = std.json.ParseOptions{
                 .ignore_unknown_fields = true,
             };
-        var parsed = std.json.parseFromSlice([]TweetHeader, allocator, buffer[start.?..], options) catch 
+        const result = std.json.parseFromSlice([]TweetHeader, allocator, buffer[start.?..], options) catch 
             return TweetHeaderError.ParseError;
-        defer parsed.deinit();
-
-        const data = parsed.value;
-        for (data) |tweet| {
-            try list.append(allocator, tweet);
-        }
-
-        return list.toOwnedSlice(allocator);
+        return result;
     }
 }
 
@@ -195,8 +160,8 @@ test "Parse headers" {
     const parsed: [1]TweetHeader = .{sample_tweet};
 
     const result = try parseTweetHeaders(testing.allocator, sample_content);
-    defer testing.allocator.free(result);
-    try testing.expectEqualDeep(result, &parsed);
+    defer result.deinit();
+    try testing.expectEqualDeep(&parsed, result.value);
 }
 
 test "Parse tweets" {
@@ -276,7 +241,6 @@ test "Parse tweets" {
     const parsed: [1]Tweet = .{sample_tweet};
 
     const result = try parseTweets(testing.allocator, sample_content);
-    defer testing.allocator.free(result);
-    std.debug.print("Sample tweet {}", .{result[0]});
-    try testing.expectEqualDeep(result, &parsed);
+    defer result.deinit();
+    try testing.expectEqualDeep(&parsed, result.value);
 }
