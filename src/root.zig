@@ -71,16 +71,16 @@ const Tweet = struct {
 };
 
 const TweetTweet = struct {
-    retweeted: bool,
-    source: []const u8,
-    favorite_count: []const u8,
-    full_text: []const u8,
-    id_str : []const u8,
-    possibly_sensitive : bool,
-    created_at : []const u8,
-    favorited : bool,
-    in_reply_to_screen_name : []const u8,
-    in_reply_to_user_id_str : []const u8
+    retweeted: bool = false,
+    source: []const u8 = "",
+    favorite_count: []const u8 = "",
+    full_text: []const u8 = "",
+    id_str : []const u8 = "",
+    possibly_sensitive : bool = false,
+    created_at : []const u8 = "",
+    favorited : bool = false,
+    in_reply_to_screen_name : []const u8 = "",
+    in_reply_to_user_id_str : []const u8 = ""
 };
 
 const TweetHeader = struct {
@@ -108,13 +108,16 @@ pub fn parseTweets(allocator: std.mem.Allocator, buffer: []const u8) TweetError!
     const start = std.mem.indexOfScalar(u8, buffer, '['); 
 
     if(start == null) {
+        std.debug.print("Header not found.", .{});
         return TweetError.ParseError;
     } else {
         const options = std.json.ParseOptions{
                 .ignore_unknown_fields = true
             };
-        const result = std.json.parseFromSlice([]Tweet, allocator, buffer[start.?..], options) catch 
+        const result = std.json.parseFromSlice([]Tweet, allocator, buffer[start.?..], options) catch |err| {
+            std.debug.print("JSON parse error: {s}\n", .{@errorName(err)});
             return TweetError.ParseError;
+        };
         return result;
     }
 }
@@ -129,8 +132,9 @@ pub fn parseTweetHeaders(allocator: std.mem.Allocator, buffer: []const u8) Tweet
         const options = std.json.ParseOptions{
                 .ignore_unknown_fields = true,
             };
-        const result = std.json.parseFromSlice([]TweetHeader, allocator, buffer[start.?..], options) catch 
+        const result = std.json.parseFromSlice([]TweetHeader, allocator, buffer[start.?..], options) catch {
             return TweetHeaderError.ParseError;
+        };
         return result;
     }
 }

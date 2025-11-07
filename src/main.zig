@@ -25,7 +25,7 @@ pub fn main() !void {
 
     const allocator = arena.allocator();
     const input_file_name = getInputFileName(allocator) catch {
-        std.debug.print("Please pass a file name of the Twitter index file,\n", .{});
+        std.debug.print("Please pass a file path to the Twitter tweets.js file,\n", .{});
         return;
     }; 
     std.debug.print("Processing file name {s}\n", .{input_file_name});
@@ -40,14 +40,14 @@ pub fn main() !void {
     const file_contents = try file.readToEndAlloc(allocator, max_file_size);
     defer allocator.free(file_contents);
 
-    const tweet_headers = zigtwit.parseTweetHeaders(allocator, file_contents) catch {
-        std.debug.print("Failed to parse the Twitter index file.\n", .{});
+    const tweet_headers = zigtwit.parseTweets(allocator, file_contents) catch |err| {
+        std.debug.print("Failed to parse the Twitter tweets file. Error {}\n", .{err});
         return;
     }; 
     std.debug.print("Parsed headers and found {d} tweets.\n", .{tweet_headers.value.len});
 
-    for (tweet_headers.value) |t1| {
-        const date1 = zdt.Datetime.fromString(t1.tweet.created_at, "%a %b %d %H:%M:%S %z %Y") catch |err| {
+    for (tweet_headers.value) |tweet| {
+        const date1 = zdt.Datetime.fromString(tweet.tweet.created_at, "%a %b %d %H:%M:%S %z %Y") catch |err| {
             std.debug.print("Parse error {}.\n", .{err});
             return;
         };
