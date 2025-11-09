@@ -19,6 +19,33 @@ fn getInputFileName(allocator: std.mem.Allocator) ZigTwitError![]const u8 {
     return filename;
 }
 
+// Take a multiline string and escape the carriage returns so it is a single line
+// Returns a new string
+fn oneLineIt(allocator: std.mem.Allocator, line: [] const u8) ![]u8 {
+    const new_size = line.len * 2;
+    var buffer : []u8 = try allocator.alloc(u8, new_size);
+    var j:usize = 0;
+    for (0..line.len) |i| {
+        if (line[i] == '\r') {
+            buffer[j] = '\\';
+            j += 1;
+            buffer[j] = 'r';
+            j += 1;
+        }
+        else if (line[i] == '\n') {
+            buffer[j] = '\\';
+            j += 1;
+            buffer[j] = 'n';
+            j += 1;
+        } else {
+            buffer[j] = line[i];
+            j += 1;
+        }
+    }
+    buffer[j] = 0;
+    return buffer;
+}
+
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
@@ -46,11 +73,33 @@ pub fn main() !void {
     }; 
     std.debug.print("Parsed headers and found {d} tweets.\n", .{tweet_headers.value.len});
 
+    // Example code print the dates
+    // for (tweet_headers.value) |tweet| {
+    //     const date1 = zdt.Datetime.fromString(tweet.tweet.created_at, "%a %b %d %H:%M:%S %z %Y") catch |err| {
+    //         std.debug.print("Parse error {}.\n", .{err});
+    //         return;
+    //     };
+    //     std.debug.print("{d}/{d}/{d}\n", .{date1.day, date1.month, @rem(date1.year, 100)});
+    // }
+
+    // Example code print the likes
     for (tweet_headers.value) |tweet| {
-        const date1 = zdt.Datetime.fromString(tweet.tweet.created_at, "%a %b %d %H:%M:%S %z %Y") catch |err| {
-            std.debug.print("Parse error {}.\n", .{err});
-            return;
-        };
-        std.debug.print("{d}/{d}/{d}\n", .{date1.day, date1.month, @rem(date1.year, 100)});
+        std.debug.print("{s}\n{s}\n", .{ tweet.tweet.id_str, tweet.tweet.full_text });
     }
 }
+
+test "one liner" {
+    const input1 =
+        \\hello
+        \\  world
+        \\    I have three lines
+        ;
+    const expected1 = 
+        \\hello\r\n  world\r\n I have three lines
+        ;
+
+    const output1 = try oneLineIt(std.testing.allocator, input1);
+    defer std.testing.allocator.free(output1);
+    std.debug.print("output {s}\n", .{output1});
+    try std.testing.expect(std.mem.eql(u8, expected1,output1));
+} 
