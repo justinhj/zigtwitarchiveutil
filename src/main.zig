@@ -1,6 +1,7 @@
 const std = @import("std");
 const zigtwit = @import("zigtwitarchiveutil");
 const zdt = @import("zdt");
+const ArrayList = std.ArrayList;
 
 const ZigTwitError = error {
     NoFileSupplied,
@@ -22,28 +23,19 @@ fn getInputFileName(allocator: std.mem.Allocator) ZigTwitError![]const u8 {
 // Take a multiline string and escape the carriage returns so it is a single line
 // Returns a new string
 fn oneLineIt(allocator: std.mem.Allocator, line: [] const u8) ![]u8 {
-    const new_size = line.len * 2;
-    var buffer : []u8 = try allocator.alloc(u8, new_size);
-    var j:usize = 0;
-    for (0..line.len) |i| {
-        if (line[i] == '\r') {
-            buffer[j] = '\\';
-            j += 1;
-            buffer[j] = 'r';
-            j += 1;
+    var output = try ArrayList(u8).initCapacity(allocator, line.len);
+    for (line) |c| {
+        if (c == '\r') {
+            try output.appendSlice(allocator, "\\r");
         }
-        else if (line[i] == '\n') {
-            buffer[j] = '\\';
-            j += 1;
-            buffer[j] = 'n';
-            j += 1;
-        } else {
-            buffer[j] = line[i];
-            j += 1;
+        else if (c == '\n') {
+            try output.appendSlice(allocator, "\\n");
+        }
+        else {
+            try output.append(allocator, c);
         }
     }
-    buffer[j] = 0;
-    return buffer;
+    return output.toOwnedSlice(allocator);
 }
 
 pub fn main() !void {
@@ -67,39 +59,49 @@ pub fn main() !void {
     const file_contents = try file.readToEndAlloc(allocator, max_file_size);
     defer allocator.free(file_contents);
 
-    const tweet_headers = zigtwit.parseTweets(allocator, file_contents) catch |err| {
+    const tweets = zigtwit.parseTweets(allocator, file_contents) catch |err| {
         std.debug.print("Failed to parse the Twitter tweets file. Error {}\n", .{err});
         return;
     }; 
-    std.debug.print("Parsed headers and found {d} tweets.\n", .{tweet_headers.value.len});
-
-    // Example code print the dates
-    // for (tweet_headers.value) |tweet| {
-    //     const date1 = zdt.Datetime.fromString(tweet.tweet.created_at, "%a %b %d %H:%M:%S %z %Y") catch |err| {
-    //         std.debug.print("Parse error {}.\n", .{err});
-    //         return;
-    //     };
-    //     std.debug.print("{d}/{d}/{d}\n", .{date1.day, date1.month, @rem(date1.year, 100)});
-    // }
+    std.debug.print("Parsed headers and found {d} tweets.\n", .{tweets.value.len});
 
     // Example code print the likes
-    for (tweet_headers.value) |tweet| {
-        std.debug.print("{s}\n{s}\n", .{ tweet.tweet.id_str, tweet.tweet.full_text });
+    for (tweets.value) |tweet| {
+        const oneLiner = try oneLineIt(allocator, tweet.tweet.full_text);
+        defer allocator.free(oneLiner);
+        std.debug.print("{s}\n{s}\n", .{ tweet.tweet.id_str, oneLiner });
     }
 }
 
-test "one liner" {
+test "multi line string becomes 1" {
     const input1 =
         \\hello
         \\  world
         \\    I have three lines
         ;
     const expected1 = 
-        \\hello\r\n  world\r\n I have three lines
+        \\hello\n  world\n    I have three lines
         ;
 
-    const output1 = try oneLineIt(std.testing.allocator, input1);
-    defer std.testing.allocator.free(output1);
-    std.debug.print("output {s}\n", .{output1});
-    try std.testing.expect(std.mem.eql(u8, expected1,output1));
+    const actual1 = try oneLineIt(std.testing.allocator, input1);
+    defer std.testing.allocator.free(actual1);
+    try std.testing.expectEqualSlices(u8, expected1, actual1);
+} 
+
+test "empty string works" {
+    const input1 = "";
+    const expected1 = "";
+
+    const actual1 = try oneLineIt(std.testing.allocator, input1);
+    defer std.testing.allocator.free(actual1);
+    try std.testing.expectEqualSlices(u8, expected1, actual1);
+} 
+
+test "string with only NL" {
+    const input1 = "\n";
+    const expected1 = "\\n";
+
+    const actual1 = try oneLineIt(std.testing.allocator, input1);
+    defer std.testing.allocator.free(actual1);
+    try std.testing.expectEqualSlices(u8, expected1, actual1);
 } 
